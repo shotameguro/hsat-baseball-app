@@ -294,7 +294,13 @@ class _YakyuAppState extends State<YakyuApp> {
       length: 10,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("HSAT Honda Suzuka Analytics System", style: TextStyle(color: _textPri, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+          title: Builder(builder: (context) {
+            final isNarrow = MediaQuery.of(context).size.width < 500;
+            return Text(
+              isNarrow ? "HSAT" : "HSAT Honda Suzuka Analytics System",
+              style: TextStyle(color: _textPri, fontSize: isNarrow ? 15 : 17, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+            );
+          }),
           bottom: const TabBar(
             isScrollable: true,
             tabs: [Tab(text: "球速"), Tab(text: "回転数"), Tab(text: "変化量"), Tab(text: "変化量マップ"), Tab(text: "リリース"), Tab(text: "位置3D"), Tab(text: "チルト"), Tab(text: "軌道"), Tab(text: "レポート"), Tab(text: "管理者")],
@@ -333,37 +339,43 @@ class _YakyuAppState extends State<YakyuApp> {
     return Container(
       padding: const EdgeInsets.all(12),
       color: _surface,
-      child: Row(
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              value: players.contains(selectedPlayer) ? selectedPlayer : null,
-              decoration: const InputDecoration(labelText: "選手名", filled: true, fillColor: _surface),
-              items: players.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-              onChanged: (v) {
-                setState(() => selectedPlayer = v);
-                fetchAnalysis(v!, selectedYear);
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              value: years.contains(selectedYear) ? selectedYear : "すべて",
-              decoration: const InputDecoration(labelText: "年度", filled: true, fillColor: _surface),
-              items: years.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-              onChanged: (v) {
-                setState(() => selectedYear = v!);
-                fetchAnalysis(selectedPlayer!, v!);
-              },
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 480;
+          final playerField = DropdownButtonFormField<String>(
+            value: players.contains(selectedPlayer) ? selectedPlayer : null,
+            decoration: const InputDecoration(labelText: "選手名", filled: true, fillColor: _surface),
+            items: players.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+            onChanged: (v) {
+              setState(() => selectedPlayer = v);
+              fetchAnalysis(v!, selectedYear);
+            },
+          );
+          final yearField = DropdownButtonFormField<String>(
+            value: years.contains(selectedYear) ? selectedYear : "すべて",
+            decoration: const InputDecoration(labelText: "年度", filled: true, fillColor: _surface),
+            items: years.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
+            onChanged: (v) {
+              setState(() => selectedYear = v!);
+              fetchAnalysis(selectedPlayer!, v!);
+            },
+          );
+          if (isNarrow) {
+            return Column(children: [playerField, const SizedBox(height: 8), yearField]);
+          }
+          return Row(children: [
+            Expanded(child: playerField),
+            const SizedBox(width: 8),
+            Expanded(child: yearField),
+          ]);
+        },
       ),
     );
   }
 
   Widget _buildGraph(String key, Color baseColor, {double height = 300}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final effectiveHeight = screenWidth < 480 ? height * 0.65 : height;
     List<dynamic> chartData = List.from(analysisData)
       ..sort((a, b) => a['date'].toString().compareTo(b['date'].toString()));
 
@@ -464,7 +476,7 @@ class _YakyuAppState extends State<YakyuApp> {
           ),
         ),
         Container(
-          height: height,
+          height: effectiveHeight,
           padding: const EdgeInsets.fromLTRB(10, 10, 20, 5),
           child: LineChart(
             LineChartData(
@@ -594,25 +606,23 @@ class _YakyuAppState extends State<YakyuApp> {
     final grouped = groupBy(analysisData, (dynamic o) => o['date'].toString());
     final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
     return Column(children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Text("縦変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-            _buildGraph(k1, Colors.green),
-          ])),
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Text("横変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-            _buildGraph(k2, Colors.red),
-          ])),
-        ],
-      ),
+      LayoutBuilder(builder: (context, constraints) {
+        final vertCol = Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("縦変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+          _buildGraph(k1, Colors.green),
+        ]);
+        final horizCol = Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("横変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+          _buildGraph(k2, Colors.red),
+        ]);
+        if (constraints.maxWidth < 480) {
+          return Column(children: [vertCol, horizCol]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: vertCol),
+          Expanded(child: horizCol),
+        ]);
+      }),
       const Divider(),
       Expanded(child: ListView.builder(
         itemCount: sortedDates.length,
