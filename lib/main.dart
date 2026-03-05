@@ -605,46 +605,45 @@ class _YakyuAppState extends State<YakyuApp> {
   Widget _buildDoubleValuePage(String k1, String k2) {
     final grouped = groupBy(analysisData, (dynamic o) => o['date'].toString());
     final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-    return Column(children: [
-      LayoutBuilder(builder: (context, constraints) {
-        final vertCol = Column(mainAxisSize: MainAxisSize.min, children: [
-          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("縦変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-          _buildGraph(k1, Colors.green),
-        ]);
-        final horizCol = Column(mainAxisSize: MainAxisSize.min, children: [
-          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("横変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-          _buildGraph(k2, Colors.red),
-        ]);
-        if (constraints.maxWidth < 480) {
-          return Column(children: [vertCol, horizCol]);
-        }
-        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: vertCol),
-          Expanded(child: horizCol),
-        ]);
-      }),
-      const Divider(),
-      Expanded(child: ListView.builder(
-        itemCount: sortedDates.length,
-        itemBuilder: (context, index) {
-          final date = sortedDates[index];
-          final items = grouped[date]!;
-          return _buildDateCard(date, [
-            const DataColumn(label: Text('球種')),
-            const DataColumn(label: Text('投球数')),
-            const DataColumn(label: Text('ホップ')),
-            const DataColumn(label: Text('横変化')),
-          ], items.map((item) {
-            return DataRow(cells: [
-              DataCell(Text(item['pitch_type'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              DataCell(Text('${item['count'] ?? 0}')),
-              DataCell(Text(item['metrics'][k1]['avg'].toStringAsFixed(1))),
-              DataCell(Text(item['metrics'][k2]['avg'].toStringAsFixed(1))),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LayoutBuilder(builder: (context, constraints) {
+            final vertCol = Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("縦変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+              _buildGraph(k1, Colors.green),
             ]);
-          }).toList(), index == 0);
-        },
-      )),
-    ]);
+            final horizCol = Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("横変化量", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+              _buildGraph(k2, Colors.red),
+            ]);
+            if (constraints.maxWidth < 480) {
+              return Column(children: [vertCol, horizCol]);
+            }
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: vertCol),
+              Expanded(child: horizCol),
+            ]);
+          }),
+          const Divider(),
+          for (int i = 0; i < sortedDates.length; i++)
+            _buildDateCard(sortedDates[i], [
+              const DataColumn(label: Text('球種')),
+              const DataColumn(label: Text('投球数')),
+              const DataColumn(label: Text('ホップ')),
+              const DataColumn(label: Text('横変化')),
+            ], grouped[sortedDates[i]]!.map((item) {
+              return DataRow(cells: [
+                DataCell(Text(item['pitch_type'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataCell(Text('${item['count'] ?? 0}')),
+                DataCell(Text(item['metrics'][k1]['avg'].toStringAsFixed(1))),
+                DataCell(Text(item['metrics'][k2]['avg'].toStringAsFixed(1))),
+              ]);
+            }).toList(), i == 0),
+        ],
+      ),
+    );
   }
 
   Widget _buildArmAnglePage() {
