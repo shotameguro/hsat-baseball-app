@@ -811,49 +811,53 @@ class _YakyuAppState extends State<YakyuApp> {
   Widget _buildReleasePointPage() {
     final grouped = groupBy(analysisData, (dynamic o) => o['date'].toString());
     final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-    return Column(children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("横位置 (RelSide)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-            _buildGraph("RelSide", Colors.indigo, height: 200),
-          ])),
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("高さ (RelHeight)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-            _buildGraph("RelHeight", Colors.teal, height: 200),
-          ])),
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("前への距離 (Extension)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-            _buildGraph("Extension", Colors.brown, height: 200),
-          ])),
+          LayoutBuilder(builder: (context, constraints) {
+            final sideCol = Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("横位置 (RelSide)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+              _buildGraph("RelSide", Colors.indigo, height: 200),
+            ]);
+            final heightCol = Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("高さ (RelHeight)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+              _buildGraph("RelHeight", Colors.teal, height: 200),
+            ]);
+            final extCol = Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Text("前への距離 (Extension)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+              _buildGraph("Extension", Colors.brown, height: 200),
+            ]);
+            if (constraints.maxWidth < 480) {
+              return Column(children: [sideCol, heightCol, extCol]);
+            }
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: sideCol),
+              Expanded(child: heightCol),
+              Expanded(child: extCol),
+            ]);
+          }),
+          const Divider(),
+          for (int i = 0; i < sortedDates.length; i++)
+            _buildDateCard(sortedDates[i], [
+              const DataColumn(label: Text('球種')),
+              const DataColumn(label: Text('RelSide')),
+              const DataColumn(label: Text('RelHeight')),
+              const DataColumn(label: Text('Extension')),
+            ], grouped[sortedDates[i]]!.map((item) {
+              final rs = item['metrics']['RelSide'];
+              final rh = item['metrics']['RelHeight'];
+              final ex = item['metrics']['Extension'];
+              return DataRow(cells: [
+                DataCell(Text(item['pitch_type'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataCell(Text(((rs?['avg'] ?? 0) as num).toStringAsFixed(2))),
+                DataCell(Text(((rh?['avg'] ?? 0) as num).toStringAsFixed(2))),
+                DataCell(Text(((ex?['avg'] ?? 0) as num).toStringAsFixed(2))),
+              ]);
+            }).toList(), i == 0),
         ],
       ),
-      const Divider(),
-      Expanded(child: ListView.builder(
-        itemCount: sortedDates.length,
-        itemBuilder: (context, index) {
-          final date = sortedDates[index];
-          final items = grouped[date]!;
-          return _buildDateCard(date, [
-            const DataColumn(label: Text('球種')),
-            const DataColumn(label: Text('RelSide')),
-            const DataColumn(label: Text('RelHeight')),
-            const DataColumn(label: Text('Extension')),
-          ], items.map((item) {
-            final rs = item['metrics']['RelSide'];
-            final rh = item['metrics']['RelHeight'];
-            final ex = item['metrics']['Extension'];
-            return DataRow(cells: [
-              DataCell(Text(item['pitch_type'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              DataCell(Text(((rs?['avg'] ?? 0) as num).toStringAsFixed(2))),
-              DataCell(Text(((rh?['avg'] ?? 0) as num).toStringAsFixed(2))),
-              DataCell(Text(((ex?['avg'] ?? 0) as num).toStringAsFixed(2))),
-            ]);
-          }).toList(), index == 0);
-        },
-      )),
-    ]);
+    );
   }
 
   Widget _buildPitchMapPage() {
